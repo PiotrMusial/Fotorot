@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Web.UI;
-using System.Web.UI.WebControls;
 using System.Data.SqlClient;
 using System.Configuration;
 using System.Security.Cryptography;
@@ -22,21 +18,34 @@ public partial class StartLoginPage : System.Web.UI.Page
 
     protected void ImageButton1_Click(object sender, ImageClickEventArgs e)
     {
-        SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["UzytkownicyConnectionString"].ConnectionString);
-        conn.Open();
+        int temp;
 
-        string checkUser = "select count(*) from Uzytkownicy where Login=@Login";
-        SqlCommand com = new SqlCommand(checkUser, conn);
-        com.Parameters.AddWithValue("@Login", TextBoxUserName.Text);
-        int temp = Convert.ToInt32(com.ExecuteScalar().ToString());
-        conn.Close();
+        using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["UzytkownicyConnectionString"].ConnectionString))
+        {
+            var ifLoginExist = "select count(*) from Uzytkownicy where Login=@Login";
+            using (var cmd = new SqlCommand(ifLoginExist, con))
+            {
+                cmd.Parameters.AddWithValue("@Login", TextBoxUserName.Text);
+                con.Open();
+                temp = Convert.ToInt32(cmd.ExecuteScalar().ToString());
+            }
+        }
+
         if (temp > 0)
         {
-            conn.Open();
-            string checkPassword = "select Password from Uzytkownicy where Login=@Login";
-            SqlCommand passCom = new SqlCommand(checkPassword, conn);
-            passCom.Parameters.AddWithValue("@Login", TextBoxUserName.Text);
-            string password = passCom.ExecuteScalar().ToString().Replace(" ", "");
+            string password;
+
+            using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["UzytkownicyConnectionString"].ConnectionString))
+            {
+                var checkPassword = "select Password from Uzytkownicy where Login=@Login";
+                using (var cmd = new SqlCommand(checkPassword, con))
+                {
+                    cmd.Parameters.AddWithValue("@Login", TextBoxUserName.Text);
+                    con.Open();
+                    password = cmd.ExecuteScalar().ToString().Replace(" ", "");
+                    con.Close();
+                }
+            }
 
             byte[] hashBytes = Convert.FromBase64String(password);
             byte[] salt = new byte[16];
@@ -45,15 +54,22 @@ public partial class StartLoginPage : System.Web.UI.Page
             byte[] hash = pbkdf2.GetBytes(20);
 
             for (int i = 0; i < 20; i++)
+            {
                 if (hashBytes[i + 16] != hash[i])
+                {
                     Label1.Text = "Nieprawidłowe hasło";
+                }
+                else
+                {
+                    Session["userName"] = TextBoxUserName.Text;
+                    Response.Redirect("MainWebSite.aspx?UserName=" + TextBoxUserName.Text);
+                }
+            }
+            
+                    
 
-            Session["userName"] = TextBoxUserName.Text;
-            Response.Redirect("MainWebSite.aspx?UserName=" + TextBoxUserName.Text);
-        }
-        else
-        {
+            
+        } else
             Label2.Text = "Nieprawidłowy login";
-        }
     }
 }

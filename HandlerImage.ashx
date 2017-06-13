@@ -1,32 +1,32 @@
 ﻿<%@ WebHandler Language="C#" Class="HandlerImage" %>
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Web;
-using System.Web.UI;
-using System.Web.UI.WebControls;
 using System.Data.SqlClient;
 using System.Data;
 using System.Configuration;
-using System.IO;
 
 public class HandlerImage : IHttpHandler {
 
     public void ProcessRequest (HttpContext context) {
 
         int id = Convert.ToInt32(context.Request.QueryString["id"].ToString());
-        SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["UzytkownicyConnectionString"].ConnectionString);
-        conn.Open();
+        SqlDataAdapter da;
+        DataTable dt;
 
-        SqlCommand comm = new SqlCommand();
-        comm.Connection = conn;
-        comm.CommandText = "select * from Images where id=@id";
-        comm.Parameters.AddWithValue("@id", id);
-
-        SqlDataAdapter da = new SqlDataAdapter(comm);
-        DataTable dt = new DataTable();
-        da.Fill(dt);
+        using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["UzytkownicyConnectionString"].ConnectionString))
+        {
+            var selectAll = "select * from Images where id=@id";
+            using (var cmd = new SqlCommand(selectAll, con))
+            {
+                cmd.Parameters.AddWithValue("@id", id);
+                con.Open();
+                da = new SqlDataAdapter(cmd);
+                dt = new DataTable();
+                da.Fill(dt);
+                con.Close();
+            }
+        }
 
         byte[] image = (byte[])dt.Rows[0]["Image"];
 
@@ -36,8 +36,6 @@ public class HandlerImage : IHttpHandler {
 
         context.Response.BinaryWrite(image);
         context.Response.Flush();
-
-        conn.Close();
     }
 
     public bool IsReusable {

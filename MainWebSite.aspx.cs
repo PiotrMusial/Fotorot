@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Web.UI;
-using System.Web.UI.WebControls;
 using System.Data.SqlClient;
 using System.Configuration;
 using System.Data;
@@ -14,21 +10,25 @@ public partial class MainWebSite : System.Web.UI.Page
     {
         this.UnobtrusiveValidationMode = System.Web.UI.UnobtrusiveValidationMode.None;
 
-        if (Request.QueryString["UserName"] != null)
-            LinkButton1.Text = Request.QueryString["UserName"];
+        LinkButton1.Text = Request.QueryString["UserName"];
 
-        SqlConnection conn = new SqlConnection(ConfigurationManager.ConnectionStrings["UzytkownicyConnectionString"].ConnectionString);
-        SqlCommand comm = new SqlCommand();
-        comm.Connection = conn;
-        comm.CommandText = "select Id from Images order by Id DESC";
+        SqlDataAdapter da;
+        DataTable dt;
 
-        SqlDataAdapter da = new SqlDataAdapter(comm);
-        DataTable dt = new DataTable();
-        da.Fill(dt);
-
+        using (var con = new SqlConnection(ConfigurationManager.ConnectionStrings["UzytkownicyConnectionString"].ConnectionString))
+        {
+            var selectImages = "select Id from Images order by Id DESC";
+            using (var cmd = new SqlCommand(selectImages, con))
+            {
+                con.Open();
+                da = new SqlDataAdapter(cmd);
+                dt = new DataTable();
+                da.Fill(dt);
+                con.Close();
+            }
+        }
         GridView1.DataSource = dt;
         GridView1.DataBind();
-
     }
 
     protected void ImageButton2_Click(object sender, ImageClickEventArgs e)
